@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package QueryServer;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+
+option go_package = "grpc/GrpcServer";
+
+service SQLService {
+  rpc ExecuteQuery(QueryRequest) returns (stream ExecuteQueryResponse);
+}
+
+message QueryRequest {
+  string sql = 1;
+  repeated string params = 2;
+}
+
+message Interval {
+  int32 months = 1;
+  int32 days = 2;
+  int64 micros = 3;
+}
+
+
+message MapValue {
+  map<string, Value> fields = 1;
+}
+
+message ListValue {
+  repeated Value values = 1;
+}
+
+// Value represents a single value of any supported type.
+message Value {
+  oneof kind {
+    google.protobuf.NullValue null_value = 1;
+    double double_value = 2;
+    int64 int64_value = 3;
+    bool bool_value = 4;
+    string string_value = 5;
+    bytes bytes_value = 6;
+    google.protobuf.Timestamp timestamp_value = 7;
+    google.protobuf.Duration duration_value = 8;
+    Interval interval_value = 9;
+    ListValue list_value = 10;
+    MapValue map_value = 11;
+  }
+}
+
+// Row represents a single row of data.
+// The order of values corresponds to the order of column_names in the Header.
+message Row {
+    repeated Value values = 1;
+}
+
+message Column {
+    string name = 1;
+    string type = 2;
+}
+
+// Header describes the columns of the result set.
+// It is sent as the first message in the stream.
+message Header {
+    repeated Column columns = 1;
+}
+
+// ExecuteQueryResponse is a wrapper message for the stream.
+// It can contain either a Header (the first message) or a Row.
+message ExecuteQueryResponse {
+    oneof result {
+        Header header = 1;
+        Row row = 2;
+    }
+}
